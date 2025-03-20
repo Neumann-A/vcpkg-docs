@@ -404,3 +404,22 @@ static library.
 
 For an example in a real project, see
 <https://github.com/Intelight/vcpkg/blob/master/triplets/x86-windows-mixed.cmake>.
+
+### Advanced per-port customization
+
+Although the above allows all kind of customization it comes with the drawback that changing the triplet changes the [package ABI hash](../reference/binarycaching.md#abi-hash)
+of all ports since the hash of the triplet file contributes to it. To avoid the recalculation of the [package ABI hash](../reference/binarycaching.md#abi-hash) for 
+unrelated ports an approach like the following can be used:
+
+```cmake
+cmake_path(GET CMAKE_CURRENT_LIST_FILE STEM LAST_ONLY TRIPLET_NAME)
+set(port_customization_file "${CMAKE_CURRENT_LIST_DIR}/${TRIPLET_NAME}/port-customization/${PORT}.cmake")
+# This ensure that a port customization does not trigger a world rebuild.
+if(DEFINED PORT AND EXISTS "${port_customization_file}")
+  list(APPEND VCPKG_HASH_ADDITIONAL_FILES "${port_customization_file}")
+  include("${port_customization_file}")
+endif()
+unset(port_customization_file)
+```
+
+Here the customization are stored in an additional folder called `${TRIPLET_NAME}/port-customization`. A customization can then be created by adding a file `${PORT}.cmake` to it with the required adjustments to `VCPKG_LIBRARY_LINKAGE` or other triplets variables. [`VCPKG_HASH_ADDITIONAL_FILES`](#vcpkg_hash_additional_files) is used to make the customization part of the [package ABI hash](../reference/binarycaching.md#abi-hash) if it exists. 
